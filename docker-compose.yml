@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: orchestrix
+      POSTGRES_PASSWORD: orchestrix
+      POSTGRES_DB: orchestrix
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orchestrix"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      ORCHESTRIX_DATABASE_URL: postgresql+asyncpg://orchestrix:orchestrix@postgres:5432/orchestrix
+      ORCHESTRIX_DATABASE_URL_SYNC: postgresql://orchestrix:orchestrix@postgres:5432/orchestrix
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: .
+    command: ["uvicorn", "orchestrix.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      ORCHESTRIX_DATABASE_URL: postgresql+asyncpg://orchestrix:orchestrix@postgres:5432/orchestrix
+      ORCHESTRIX_DATABASE_URL_SYNC: postgresql://orchestrix:orchestrix@postgres:5432/orchestrix
+      ORCHESTRIX_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  worker-1:
+    build: .
+    command: ["python", "-m", "orchestrix.worker.process", "--name", "worker-1"]
+    environment:
+      ORCHESTRIX_DATABASE_URL: postgresql+asyncpg://orchestrix:orchestrix@postgres:5432/orchestrix
+      ORCHESTRIX_DATABASE_URL_SYNC: postgresql://orchestrix:orchestrix@postgres:5432/orchestrix
+      ORCHESTRIX_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker-2:
+    build: .
+    command: ["python", "-m", "orchestrix.worker.process", "--name", "worker-2"]
+    environment:
+      ORCHESTRIX_DATABASE_URL: postgresql+asyncpg://orchestrix:orchestrix@postgres:5432/orchestrix
+      ORCHESTRIX_DATABASE_URL_SYNC: postgresql://orchestrix:orchestrix@postgres:5432/orchestrix
+      ORCHESTRIX_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  scheduler:
+    build: .
+    command: ["python", "-m", "orchestrix.scheduler"]
+    environment:
+      ORCHESTRIX_DATABASE_URL: postgresql+asyncpg://orchestrix:orchestrix@postgres:5432/orchestrix
+      ORCHESTRIX_DATABASE_URL_SYNC: postgresql://orchestrix:orchestrix@postgres:5432/orchestrix
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  dashboard:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./dashboard:/app
+    environment:
+      VITE_API_BASE: http://api:8000
+
+volumes:
+  pgdata:
