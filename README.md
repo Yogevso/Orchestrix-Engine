@@ -8,7 +8,9 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A distributed async job & workflow execution engine with reliable processing, configurable retry policies, recurring jobs, DAG workflows with pause/resume, JWT authentication, WebSocket live updates, worker pools, Prometheus metrics, OpenTelemetry tracing, an Admin CLI, and a real-time React dashboard.
+**The execution plane of the [Orchestrix Platform](#platform-architecture).** Owns job scheduling, DAG workflow orchestration, and worker coordination. Consumes JWTs from IAM for tenant-scoped auth. Emits job lifecycle events, queue stats, Prometheus metrics, and real-time WebSocket updates consumed by Console and AI.
+
+Distributed async job & workflow engine with reliable processing, configurable retry policies, recurring jobs, DAG workflows with pause/resume, worker pools, OpenTelemetry tracing, an Admin CLI, and a real-time dashboard.
 
 ## Part of the Orchestrix Platform
 
@@ -27,6 +29,29 @@ Orchestrix Engine is the **execution plane** of the Orchestrix Platform — it o
 - Worker health via heartbeats and registration
 - Queue statistics and Prometheus metrics
 - Real-time push via WebSocket (`job.update`, `workflow.update`, `worker.update`)
+
+### Platform Architecture
+
+```mermaid
+flowchart TB
+    Console["Orchestrix Console\n:5173 — Operator UI"]
+    Engine["Orchestrix Engine\n:8000 — Execution Plane"]
+    AI["Orchestrix AI\n:8001 — Analysis Plane"]
+    Insights["System Insights API\n:8002 — Telemetry Backend"]
+    IAM["Identity Access Service\n:8003 — Auth & RBAC"]
+
+    Console -- "/api — jobs, workflows, workers" --> Engine
+    Console -- "/ai — incident analysis" --> AI
+    Console -- "/insights — host metrics" --> Insights
+    Console -- "/iam — login, tokens" --> IAM
+
+    AI -- "poll events & jobs" --> Engine
+    AI -- "correlate host metrics" --> Insights
+    Engine -. "validate JWT" .-> IAM
+    AI -. "validate JWT" .-> IAM
+
+    style Engine fill:#7c3aed,color:#fff,stroke:#7c3aed
+```
 
 ## What Is This?
 
