@@ -87,7 +87,7 @@ class WorkerProcess:
                 # If this job is part of a workflow, notify the DAG
                 if job and job.workflow_step_id:
                     from orchestrix.engine.workflows import on_job_failed
-                    await on_job_failed(session, job
+                    await on_job_failed(session, job)
 
         finally:
             heartbeat_task.cancel()

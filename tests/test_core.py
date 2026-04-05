@@ -1,9 +1,7 @@
 """Unit tests for the core engine — job lifecycle, retries, dead-lettering."""
 
-import uuid
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orchestrix.engine import core
@@ -66,7 +64,7 @@ async def test_poll_job_respects_queue(session: AsyncSession):
 
 async def test_start_job(session: AsyncSession):
     worker = await core.register_worker(session, name="w4", queues=["default"])
-    job = await core.create_job(session, type="email.send", payload={})
+    await core.create_job(session, type="email.send", payload={})
     polled = await core.poll_job(session, worker.id, ["default"])
     started = await core.start_job(session, polled.id, worker.id)
     assert started is not None
@@ -79,7 +77,7 @@ async def test_start_job(session: AsyncSession):
 
 async def test_complete_job(session: AsyncSession):
     worker = await core.register_worker(session, name="w5", queues=["default"])
-    job = await core.create_job(session, type="email.send", payload={})
+    await core.create_job(session, type="email.send", payload={})
     polled = await core.poll_job(session, worker.id, ["default"])
     started = await core.start_job(session, polled.id, worker.id)
     completed = await core.complete_job(session, started.id, worker.id, {"sent": True})
@@ -92,7 +90,7 @@ async def test_complete_job(session: AsyncSession):
 
 async def test_fail_job_retries(session: AsyncSession):
     worker = await core.register_worker(session, name="w6", queues=["default"])
-    job = await core.create_job(session, type="email.send", payload={}, max_attempts=3)
+    await core.create_job(session, type="email.send", payload={}, max_attempts=3)
     polled = await core.poll_job(session, worker.id, ["default"])
     started = await core.start_job(session, polled.id, worker.id)
     failed = await core.fail_job(session, started.id, worker.id, "connection timeout")
@@ -103,7 +101,7 @@ async def test_fail_job_retries(session: AsyncSession):
 
 async def test_fail_job_dead_letter(session: AsyncSession):
     worker = await core.register_worker(session, name="w7", queues=["default"])
-    job = await core.create_job(session, type="email.send", payload={}, max_attempts=1)
+    await core.create_job(session, type="email.send", payload={}, max_attempts=1)
     polled = await core.poll_job(session, worker.id, ["default"])
     started = await core.start_job(session, polled.id, worker.id)
     failed = await core.fail_job(session, started.id, worker.id, "crash")

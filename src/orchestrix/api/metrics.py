@@ -6,7 +6,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orchestrix.database import get_session
-from orchestrix.models.enums import JobStatus, WorkerStatus, WorkflowStatus
 from orchestrix.models.tables import Job, Worker, WorkflowRun
 
 router = APIRouter(tags=["metrics"])

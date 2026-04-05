@@ -1,13 +1,12 @@
 """Shared test fixtures — async database, session, test client."""
 
 import asyncio
-import uuid
 from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from orchestrix.models.tables import Base
 
@@ -37,11 +36,17 @@ async def async_engine():
 
 @pytest_asyncio.fixture
 async def session(async_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Provide a transactional session that rolls back after each test."""
-    session_factory = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
-    async with session_factory() as sess:
-        yield sess
-        await sess.rollback()
+    """Provide a transactional session that rolls back after each test.
+
+    Uses join_transaction_block so that session.commit() inside business logic
+    only releases a SAVEPOINT instead of truly committing, keeping each test
+    fully isolated.
+    """
+    async with async_engine.connect() as conn:
+        await conn.begin()
+        async with AsyncSession(bind=conn, join_transaction_mode="rollback_only", expire_on_commit=False) as sess:
+            yield sess
+        await conn.rollback()
 
 
 @pytest_asyncio.fixture
@@ -50,14 +55,16 @@ async def client(async_engine) -> AsyncGenerator[AsyncClient, None]:
     from orchestrix.api.app import app
     from orchestrix.database import get_session
 
-    session_factory = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_engine.connect() as conn:
+        await conn.begin()
 
-    async def _override_session():
-        async with session_factory() as sess:
-            yield sess
+        async def _override_session():
+            async with AsyncSession(bind=conn, join_transaction_mode="rollback_only", expire_on_commit=False) as sess:
+                yield sess
 
-    app.dependency_overrides[get_session] = _override_session
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-    app.dependency_overrides.clear()
+        app.dependency_overrides[get_session] = _override_session
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
+        app.dependency_overrides.clear()
+        await conn.rollback()

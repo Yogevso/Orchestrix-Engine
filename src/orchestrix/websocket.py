@@ -1,6 +1,5 @@
 """WebSocket hub — broadcasts job and workflow status changes to connected clients."""
 
-import asyncio
 import json
 import logging
 from collections import defaultdict

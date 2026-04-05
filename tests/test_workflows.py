@@ -1,10 +1,9 @@
 """Unit tests for the workflow engine — DAG creation, cycle detection, advancement."""
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orchestrix.engine import core, workflows
+from orchestrix.engine import workflows
 from orchestrix.models.enums import WorkflowStatus, WorkflowStepStatus
 
 

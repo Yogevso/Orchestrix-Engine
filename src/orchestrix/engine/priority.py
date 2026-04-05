@@ -1,7 +1,6 @@
 """Weighted fair scheduling — distributes poll slots across priority bands within a queue."""
 
 import random
-from collections import defaultdict
 
 
 def weighted_queue_selection(queues: list[str], weights: dict[str, int] | None = None) -> list[str]:

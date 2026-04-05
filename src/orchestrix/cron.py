@@ -4,7 +4,7 @@ Supports standard 5-field cron: minute hour day_of_month month day_of_week
 Supports: numbers, wildcards (*), ranges (1-5), steps (*/15), lists (1,3,5)
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 
 def _parse_field(field: str, min_val: int, max_val: int) -> set[int]:

@@ -4,7 +4,6 @@ import asyncio
 import logging
 import signal
 
-from orchestrix.config import settings
 from orchestrix.database import async_session_factory
 from orchestrix.engine import core
 
