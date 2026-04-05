@@ -1,5 +1,13 @@
 # Orchestrix Engine
 
+![CI](https://github.com/Yogevso/Orchestrix-Engine/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.11+-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 A distributed async job & workflow execution engine with reliable processing, configurable retry policies, recurring jobs, DAG workflows with pause/resume, JWT authentication, WebSocket live updates, worker pools, Prometheus metrics, OpenTelemetry tracing, an Admin CLI, and a real-time React dashboard.
 
 ## What Is This?
@@ -97,22 +105,138 @@ Steps define dependencies via `depends_on`. The engine dispatches ready steps as
 - **CI/CD pipeline** — GitHub Actions: lint (Ruff), test (pytest + Postgres + Redis), Docker build & push to GHCR
 - **Full test suite** — pytest-asyncio unit & integration tests with in-memory SQLite
 
-## Screenshots
+## Live Demo
 
-<p align="center">
-  <img src="docs/screenshots/dashboard-jobs.png" alt="Jobs Dashboard" width="800" />
-  <br><em>Jobs view — real-time status, queue stats, and job timeline</em>
-</p>
+> All output below is from a real running instance — no mocks.
 
-<p align="center">
-  <img src="docs/screenshots/dashboard-workflows.png" alt="Workflow Runs" width="800" />
-  <br><em>Workflow runs — DAG step progress, fan-out/fan-in visualization</em>
-</p>
+### 1. Submit a Job → Worker Picks It Up → Succeeds
 
-<p align="center">
-  <img src="docs/screenshots/dashboard-workers.png" alt="Workers" width="800" />
-  <br><em>Worker pool — capabilities, concurrency, heartbeat status</em>
-</p>
+```bash
+$ curl -s -X POST http://localhost:8000/jobs \
+    -H "Content-Type: application/json" \
+    -d '{"type":"email.send","payload":{"to":"user@example.com","subject":"Welcome"}}'
+
+{
+  "id": "daed7004-...",
+  "type": "email.send",
+  "status": "QUEUED",
+  "attempts": 0,
+  "max_attempts": 3
+}
+
+# A few seconds later...
+$ curl -s http://localhost:8000/jobs/daed7004-...
+
+{
+  "status": "SUCCEEDED",
+  "attempts": 1,
+  "payload": {"to": "user@example.com", "subject": "Welcome"}
+}
+```
+
+### 2. Retry Exhaustion → Dead-Letter → Requeue
+
+```bash
+$ curl -s -X POST http://localhost:8000/jobs \
+    -H "Content-Type: application/json" \
+    -d '{"type":"chaos.fail","payload":{"reason":"testing retries"},"max_attempts":3}'
+
+{
+  "id": "344ece6c-...",
+  "type": "chaos.fail",
+  "status": "QUEUED"
+}
+
+# After 3 failed attempts with exponential backoff...
+$ curl -s http://localhost:8000/jobs/344ece6c-...
+
+{
+  "status": "DEAD_LETTER",
+  "attempts": 3,
+  "last_error": "Chaos failure: testing retries"
+}
+
+# Full event timeline:
+$ curl -s http://localhost:8000/jobs/344ece6c-.../events
+
+CREATED → LEASED → RUNNING → RETRIED → LEASED → RUNNING → RETRIED → LEASED → RUNNING → DEAD_LETTERED
+
+# Requeue from dead-letter:
+$ curl -s -X POST http://localhost:8000/jobs/344ece6c-.../requeue
+
+{
+  "status": "QUEUED",
+  "attempts": 0
+}
+```
+
+### 3. DAG Workflow — Fan-out / Fan-in
+
+```bash
+# Define a 4-step ETL pipeline:
+#   extract → transform (parallel)
+#                        ↘ load
+#   extract → validate  (parallel)
+#                        ↗
+
+$ curl -s -X POST http://localhost:8000/workflows \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "etl-pipeline-demo",
+      "steps": [
+        {"name": "extract",   "job_type": "data.process", "payload": {"source": "s3://bucket/raw"}},
+        {"name": "transform", "job_type": "data.process", "depends_on": ["extract"]},
+        {"name": "validate",  "job_type": "data.process", "depends_on": ["extract"]},
+        {"name": "load",      "job_type": "data.process", "depends_on": ["transform", "validate"]}
+      ]
+    }'
+
+# Start the run:
+$ curl -s -X POST http://localhost:8000/workflows/runs \
+    -d '{"workflow_id": "<workflow-id>"}'
+
+{
+  "id": "cb160aa6-...",
+  "status": "RUNNING",
+  "steps": [
+    {"step_name": "extract",   "status": "QUEUED"},
+    {"step_name": "transform", "status": "PENDING"},
+    {"step_name": "validate",  "status": "PENDING"},
+    {"step_name": "load",      "status": "PENDING"}
+  ]
+}
+
+# Workers execute the DAG: extract → transform+validate (fan-out) → load (fan-in)
+$ curl -s http://localhost:8000/workflows/runs/cb160aa6-...
+
+{
+  "status": "SUCCEEDED",
+  "steps": [
+    {"step_name": "extract",   "status": "SUCCEEDED"},
+    {"step_name": "transform", "status": "SUCCEEDED"},
+    {"step_name": "validate",  "status": "SUCCEEDED"},
+    {"step_name": "load",      "status": "SUCCEEDED"}
+  ]
+}
+```
+
+### 4. Queue Statistics
+
+```bash
+$ curl -s http://localhost:8000/jobs/stats
+
+[
+  {
+    "queue_name": "default",
+    "queued": 0,
+    "leased": 0,
+    "running": 0,
+    "succeeded": 25,
+    "failed": 0,
+    "dead_letter": 8
+  }
+]
+```
 
 ## Run It Locally
 
@@ -317,20 +441,13 @@ docker compose stop worker-1
 
 ## Demo Scenarios
 
-### 1. Normal Execution
-Submit a job → a worker picks it up → processes it → status transitions to `SUCCEEDED` in the dashboard.
-
-### 2. Worker Crash Recovery
-Submit a slow job → stop the worker mid-execution → the lease expires → the scheduler requeues the job → a different worker picks it up and completes it. **Zero data loss, zero manual intervention.**
-
-### 3. Retry & Dead-Letter
-Submit a job with `chaos.fail` handler → watch it retry with the configured backoff strategy (exponential by default, or linear/fixed per job type) → after max retries, it moves to `DEAD_LETTER` → manually requeue it from the API, CLI, or dashboard.
-
-### 4. Workflow DAG Execution
-Create a multi-step workflow with dependencies → start a run → watch steps execute in dependency order → fan-out to parallel branches → pause the workflow mid-execution → resume it → fan-in merges results → workflow completes.
-
-### 5. Recurring Job Scheduling
-Create a cron-scheduled job → the scheduler fires it on schedule → each occurrence creates a new job in the queue → workers process it automatically.
+| # | Scenario | What Happens |
+|---|----------|--------------|
+| 1 | **Normal Execution** | Submit a job → worker picks it up → `SUCCEEDED`. See [Live Demo §1](#1-submit-a-job--worker-picks-it-up--succeeds). |
+| 2 | **Worker Crash Recovery** | Submit a slow job → kill the worker → lease expires → scheduler requeues → another worker completes it. Zero data loss. |
+| 3 | **Retry & Dead-Letter** | `chaos.fail` handler → exponential backoff retries → `DEAD_LETTER` after max attempts → requeue from API/CLI/dashboard. See [Live Demo §2](#2-retry-exhaustion--dead-letter--requeue). |
+| 4 | **DAG Workflow** | Multi-step pipeline with fan-out/fan-in → steps execute in dependency order → pause/resume mid-execution. See [Live Demo §3](#3-dag-workflow--fan-out--fan-in). |
+| 5 | **Recurring Jobs** | Cron-scheduled job → scheduler fires on schedule → workers process each occurrence automatically. |
 
 ## Tech Stack
 
