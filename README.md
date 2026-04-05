@@ -8,7 +8,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**The execution plane of the [Orchestrix Platform](#platform-architecture).** Owns job scheduling, DAG workflow orchestration, and worker coordination. Consumes JWTs from IAM for tenant-scoped auth. Emits job lifecycle events, queue stats, Prometheus metrics, and real-time WebSocket updates consumed by Console and AI.
+**The execution plane of the [Orchestrix Platform](https://github.com/Yogevso/Orchestrix-Platform).** Owns job scheduling, DAG workflow orchestration, and worker coordination. Consumes JWTs from IAM for tenant-scoped auth. Emits job lifecycle events, queue stats, Prometheus metrics, and real-time WebSocket updates consumed by Console and AI.
 
 Distributed async job & workflow engine with reliable processing, configurable retry policies, recurring jobs, DAG workflows with pause/resume, worker pools, OpenTelemetry tracing, an Admin CLI, and a real-time dashboard.
 
