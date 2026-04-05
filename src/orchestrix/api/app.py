@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from orchestrix.api.auth import router as auth_router
+from orchestrix.api.events import router as events_router
 from orchestrix.api.jobs import queue_router, recurring_router, router as jobs_router
 from orchestrix.api.metrics import router as metrics_router
 from orchestrix.api.workers import router as workers_router
@@ -38,6 +39,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(jobs_router)
+app.include_router(events_router)
 app.include_router(workers_router)
 app.include_router(workflows_router)
 app.include_router(queue_router)

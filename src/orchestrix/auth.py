@@ -46,7 +46,31 @@ def create_access_token(
 
 
 def decode_token(token: str) -> dict:
-    """Decode and validate a JWT token."""
+    """Decode and validate a JWT token.
+
+    Tries IAM-issued tokens first (if iam_jwt_secret_key is configured),
+    then falls back to Engine-issued tokens.
+    """
+    # Try IAM token validation first
+    if settings.iam_jwt_secret_key:
+        try:
+            payload = jwt.decode(
+                token,
+                settings.iam_jwt_secret_key,
+                algorithms=[settings.jwt_algorithm],
+                issuer=settings.iam_jwt_issuer,
+                options={"require": ["sub", "tenant_id", "role", "type", "exp", "iss"]},
+            )
+            if payload.get("type") == "access":
+                # Map IAM roles to Engine roles
+                iam_role = payload.get("role", "USER")
+                role_map = {"SYS_ADMIN": "admin", "TENANT_ADMIN": "operator", "USER": "viewer"}
+                payload["role"] = role_map.get(iam_role, "viewer")
+                return payload
+        except jwt.InvalidTokenError:
+            pass  # Not an IAM token — try Engine token
+
+    # Engine-issued token
     try:
         return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
     except jwt.ExpiredSignatureError:

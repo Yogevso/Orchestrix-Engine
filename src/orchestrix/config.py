@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiry_hours: int = 24
 
+    # IAM integration — set to accept tokens from identity-access-service
+    iam_jwt_secret_key: str = ""
+    iam_jwt_issuer: str = "identity-access-service"
+
     # OpenTelemetry
     otel_enabled: bool = False
     otel_exporter_endpoint: str = "http://localhost:4317"

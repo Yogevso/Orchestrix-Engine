@@ -10,6 +10,24 @@
 
 A distributed async job & workflow execution engine with reliable processing, configurable retry policies, recurring jobs, DAG workflows with pause/resume, JWT authentication, WebSocket live updates, worker pools, Prometheus metrics, OpenTelemetry tracing, an Admin CLI, and a real-time React dashboard.
 
+## Part of the Orchestrix Platform
+
+Orchestrix Engine is the **execution plane** of the Orchestrix Platform — it owns job scheduling, workflow orchestration, and worker coordination.
+
+| Service | Role | Interaction |
+|---------|------|-------------|
+| **[Orchestrix Console](https://github.com/Yogevso/orchestrix-console)** | Operator UI | Consumes Engine REST API and WebSocket for real-time job/workflow management |
+| **[Orchestrix AI](https://github.com/Yogevso/orchestrix-ai)** | Analysis plane | Polls Engine events to detect failures, anomalies, and generate root-cause analysis |
+| **[System Insights API](https://github.com/Yogevso/system-insights-api)** | Telemetry backend | Provides host/service metrics that AI correlates with Engine execution data |
+| **[Identity Access Service](https://github.com/Yogevso/identity-access-service)** | Shared auth | Issues JWTs that Engine validates for tenant-scoped, role-based access control |
+
+**Data Engine exposes:**
+- Job lifecycle events (`QUEUED → RUNNING → SUCCEEDED/FAILED → DEAD_LETTER`)
+- Workflow run state transitions and step completions
+- Worker health via heartbeats and registration
+- Queue statistics and Prometheus metrics
+- Real-time push via WebSocket (`job.update`, `workflow.update`, `worker.update`)
+
 ## What Is This?
 
 Orchestrix Engine is a production-style execution platform designed to reliably run background jobs and multi-step workflows under real-world failure conditions — worker crashes, retries, timeouts, and system overload. It implements the same patterns used by systems like Celery, Temporal, and AWS Step Functions, built from scratch to demonstrate deep understanding of distributed systems.

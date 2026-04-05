@@ -395,6 +395,32 @@ async def get_job_events(session: AsyncSession, job_id: uuid.UUID) -> list[JobEv
     return list(result.scalars().all())
 
 
+async def list_events(
+    session: AsyncSession,
+    *,
+    since: datetime | None = None,
+    event_type: JobEventType | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[JobEvent], int]:
+    """List job events across all jobs, optionally filtered by time and type."""
+    q = select(JobEvent)
+    count_q = select(func.count(JobEvent.id))
+
+    if since is not None:
+        q = q.where(JobEvent.created_at >= since)
+        count_q = count_q.where(JobEvent.created_at >= since)
+    if event_type is not None:
+        q = q.where(JobEvent.event_type == event_type)
+        count_q = count_q.where(JobEvent.event_type == event_type)
+
+    q = q.order_by(JobEvent.created_at.desc()).limit(limit).offset(offset)
+
+    events = (await session.execute(q)).scalars().all()
+    total = (await session.execute(count_q)).scalar()
+    return list(events), total
+
+
 async def list_workers(session: AsyncSession) -> list[Worker]:
     result = await session.execute(select(Worker).order_by(Worker.created_at.desc()))
     return list(result.scalars().all())
