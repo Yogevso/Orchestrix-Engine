@@ -72,14 +72,22 @@ class WorkerProcess:
 
             # Success
             async with async_session_factory() as session:
-                await core.complete_job(session, job_id, self.worker_id, result)
+                job = await core.complete_job(session, job_id, self.worker_id, result)
+                # If this job is part of a workflow, advance the DAG
+                if job and job.workflow_step_id:
+                    from orchestrix.engine.workflows import on_job_completed
+                    await on_job_completed(session, job)
             logger.info("Job %s succeeded", job_id)
 
         except Exception as exc:
             # Failure
             logger.error("Job %s failed: %s", job_id, exc)
             async with async_session_factory() as session:
-                await core.fail_job(session, job_id, self.worker_id, str(exc))
+                job = await core.fail_job(session, job_id, self.worker_id, str(exc))
+                # If this job is part of a workflow, notify the DAG
+                if job and job.workflow_step_id:
+                    from orchestrix.engine.workflows import on_job_failed
+                    await on_job_failed(session, job
 
         finally:
             heartbeat_task.cancel()
