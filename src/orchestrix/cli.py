@@ -26,8 +26,12 @@ pass_cli = click.make_pass_decorator(OrchetrixCLI, ensure=True)
 
 
 @click.group()
-@click.option("--base-url", default=DEFAULT_BASE_URL, envvar="ORCHESTRIX_URL", help="API base URL")
-@click.option("--token", default=None, envvar="ORCHESTRIX_TOKEN", help="JWT token for auth")
+@click.option(
+    "--base-url", default=DEFAULT_BASE_URL, envvar="ORCHESTRIX_URL", help="API base URL"
+)
+@click.option(
+    "--token", default=None, envvar="ORCHESTRIX_TOKEN", help="JWT token for auth"
+)
 @click.pass_context
 def cli(ctx, base_url: str, token: str | None):
     """Orchestrix Engine — Admin CLI"""
@@ -55,7 +59,9 @@ def jobs():
 
 
 @jobs.command("list")
-@click.option("--status", default=None, help="Filter by status (QUEUED, RUNNING, SUCCEEDED, etc.)")
+@click.option(
+    "--status", default=None, help="Filter by status (QUEUED, RUNNING, SUCCEEDED, etc.)"
+)
 @click.option("--queue", default=None, help="Filter by queue name")
 @click.option("--type", "job_type", default=None, help="Filter by job type")
 @click.option("--limit", default=20, help="Max results")
@@ -73,7 +79,9 @@ def list_jobs(obj: OrchetrixCLI, status, queue, job_type, limit):
     data = resp.json()
     if data.get("jobs"):
         for j in data["jobs"]:
-            click.echo(f"  {j['id'][:8]}  {j['status']:12s}  {j['type']:20s}  q={j['queue_name']}  attempts={j['attempts']}/{j['max_attempts']}")
+            click.echo(
+                f"  {j['id'][:8]}  {j['status']:12s}  {j['type']:20s}  q={j['queue_name']}  attempts={j['attempts']}/{j['max_attempts']}"
+            )
     click.echo(f"\nTotal: {data.get('total', 0)}")
 
 
@@ -97,12 +105,15 @@ def get_job(obj: OrchetrixCLI, job_id):
 @click.pass_obj
 def create_job(obj: OrchetrixCLI, job_type, queue, priority, payload):
     """Create a new job."""
-    resp = obj.client.post("/jobs", json={
-        "type": job_type,
-        "queue_name": queue,
-        "priority": priority,
-        "payload": json.loads(payload),
-    })
+    resp = obj.client.post(
+        "/jobs",
+        json={
+            "type": job_type,
+            "queue_name": queue,
+            "priority": priority,
+            "payload": json.loads(payload),
+        },
+    )
     data = resp.json()
     click.echo(f"Created job {data['id']} (status={data['status']})")
 
@@ -138,7 +149,9 @@ def job_events(obj: OrchetrixCLI, job_id):
     """Show event log for a job."""
     resp = obj.client.get(f"/jobs/{job_id}/events")
     for e in resp.json():
-        click.echo(f"  {e['created_at']}  {e['event_type']:15s}  {e.get('message', '')}")
+        click.echo(
+            f"  {e['created_at']}  {e['event_type']:15s}  {e.get('message', '')}"
+        )
 
 
 @jobs.command("stats")
@@ -219,12 +232,17 @@ def list_runs(obj: OrchetrixCLI, workflow_id, status):
 @click.pass_obj
 def start_run(obj: OrchetrixCLI, workflow_id, payload):
     """Start a new workflow run."""
-    resp = obj.client.post("/workflows/runs", json={
-        "workflow_id": workflow_id,
-        "input_payload": json.loads(payload),
-    })
+    resp = obj.client.post(
+        "/workflows/runs",
+        json={
+            "workflow_id": workflow_id,
+            "input_payload": json.loads(payload),
+        },
+    )
     data = resp.json()
-    click.echo(f"Started run {data['id']} (status={data['status']}, steps={len(data.get('steps', []))})")
+    click.echo(
+        f"Started run {data['id']} (status={data['status']}, steps={len(data.get('steps', []))})"
+    )
 
 
 @workflows.command("pause")
@@ -282,15 +300,20 @@ def list_recurring(obj: OrchetrixCLI):
 @click.pass_obj
 def create_recurring(obj: OrchetrixCLI, name, job_type, cron, queue, payload):
     """Create a recurring job."""
-    resp = obj.client.post("/recurring", json={
-        "name": name,
-        "type": job_type,
-        "cron_expression": cron,
-        "queue_name": queue,
-        "payload": json.loads(payload),
-    })
+    resp = obj.client.post(
+        "/recurring",
+        json={
+            "name": name,
+            "type": job_type,
+            "cron_expression": cron,
+            "queue_name": queue,
+            "payload": json.loads(payload),
+        },
+    )
     data = resp.json()
-    click.echo(f"Created recurring job {data['id']} (next_run={data.get('next_run_at')})")
+    click.echo(
+        f"Created recurring job {data['id']} (next_run={data.get('next_run_at')})"
+    )
 
 
 # ── Metrics ──
@@ -305,6 +328,7 @@ def metrics(obj: OrchetrixCLI):
 
 
 # ── Entry point ──
+
 
 def main():
     cli()

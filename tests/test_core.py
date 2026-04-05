@@ -1,6 +1,5 @@
 """Unit tests for the core engine — job lifecycle, retries, dead-lettering."""
 
-
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,12 +23,16 @@ async def test_create_job(session: AsyncSession):
 
 
 async def test_create_job_custom_queue(session: AsyncSession):
-    job = await core.create_job(session, type="data.process", payload={}, queue_name="high")
+    job = await core.create_job(
+        session, type="data.process", payload={}, queue_name="high"
+    )
     assert job.queue_name == "high"
 
 
 async def test_create_job_with_priority(session: AsyncSession):
-    job = await core.create_job(session, type="report.generate", payload={}, priority=10)
+    job = await core.create_job(
+        session, type="report.generate", payload={}, priority=10
+    )
     assert job.priority == 10
 
 
@@ -135,7 +138,9 @@ async def test_requeue_dead_letter_job(session: AsyncSession):
 
 
 async def test_register_worker(session: AsyncSession):
-    worker = await core.register_worker(session, name="test-worker", queues=["alpha", "beta"])
+    worker = await core.register_worker(
+        session, name="test-worker", queues=["alpha", "beta"]
+    )
     assert worker.id is not None
     assert worker.name == "test-worker"
     assert worker.queues == ["alpha", "beta"]

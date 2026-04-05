@@ -44,7 +44,9 @@ async def session(async_engine) -> AsyncGenerator[AsyncSession, None]:
     """
     async with async_engine.connect() as conn:
         await conn.begin()
-        async with AsyncSession(bind=conn, join_transaction_mode="rollback_only", expire_on_commit=False) as sess:
+        async with AsyncSession(
+            bind=conn, join_transaction_mode="rollback_only", expire_on_commit=False
+        ) as sess:
             yield sess
         await conn.rollback()
 
@@ -59,7 +61,9 @@ async def client(async_engine) -> AsyncGenerator[AsyncClient, None]:
         await conn.begin()
 
         async def _override_session():
-            async with AsyncSession(bind=conn, join_transaction_mode="rollback_only", expire_on_commit=False) as sess:
+            async with AsyncSession(
+                bind=conn, join_transaction_mode="rollback_only", expire_on_commit=False
+            ) as sess:
                 yield sess
 
         app.dependency_overrides[get_session] = _override_session

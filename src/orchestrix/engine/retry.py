@@ -63,15 +63,36 @@ def get_retry_policy(job_type: str) -> RetryPolicy:
 
 # ── Pre-configured policies for demo handlers ──
 
-register_retry_policy("email.send", RetryPolicy(
-    strategy=RetryStrategy.EXPONENTIAL, base_delay=5.0, max_delay=120.0,
-))
-register_retry_policy("data.process", RetryPolicy(
-    strategy=RetryStrategy.LINEAR, base_delay=10.0, max_delay=300.0,
-))
-register_retry_policy("report.generate", RetryPolicy(
-    strategy=RetryStrategy.FIXED, base_delay=30.0, max_delay=30.0,
-))
-register_retry_policy("chaos.random", RetryPolicy(
-    strategy=RetryStrategy.EXPONENTIAL, base_delay=2.0, max_delay=60.0, multiplier=3.0,
-))
+register_retry_policy(
+    "email.send",
+    RetryPolicy(
+        strategy=RetryStrategy.EXPONENTIAL,
+        base_delay=5.0,
+        max_delay=120.0,
+    ),
+)
+register_retry_policy(
+    "data.process",
+    RetryPolicy(
+        strategy=RetryStrategy.LINEAR,
+        base_delay=10.0,
+        max_delay=300.0,
+    ),
+)
+register_retry_policy(
+    "report.generate",
+    RetryPolicy(
+        strategy=RetryStrategy.FIXED,
+        base_delay=30.0,
+        max_delay=30.0,
+    ),
+)
+register_retry_policy(
+    "chaos.random",
+    RetryPolicy(
+        strategy=RetryStrategy.EXPONENTIAL,
+        base_delay=2.0,
+        max_delay=60.0,
+        multiplier=3.0,
+    ),
+)

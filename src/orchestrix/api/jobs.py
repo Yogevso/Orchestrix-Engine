@@ -59,7 +59,9 @@ async def list_jobs(
         limit=limit,
         offset=offset,
     )
-    return JobListResponse(jobs=[JobResponse.model_validate(j) for j in jobs], total=total)
+    return JobListResponse(
+        jobs=[JobResponse.model_validate(j) for j in jobs], total=total
+    )
 
 
 @router.get("/stats", response_model=list[QueueStats])
@@ -77,7 +79,9 @@ async def get_job(job_id: uuid.UUID, session: AsyncSession = Depends(get_session
 
 
 @router.get("/{job_id}/events", response_model=list[JobEventResponse])
-async def get_job_events(job_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def get_job_events(
+    job_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     events = await core.get_job_events(session, job_id)
     return [JobEventResponse.model_validate(e) for e in events]
 
@@ -86,7 +90,9 @@ async def get_job_events(job_id: uuid.UUID, session: AsyncSession = Depends(get_
 async def cancel_job(job_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
     job = await core.cancel_job(session, job_id)
     if not job:
-        raise HTTPException(status_code=409, detail="Job cannot be cancelled in its current state")
+        raise HTTPException(
+            status_code=409, detail="Job cannot be cancelled in its current state"
+        )
     return job
 
 
@@ -94,7 +100,9 @@ async def cancel_job(job_id: uuid.UUID, session: AsyncSession = Depends(get_sess
 async def requeue_job(job_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
     job = await core.requeue_job(session, job_id)
     if not job:
-        raise HTTPException(status_code=409, detail="Job cannot be requeued in its current state")
+        raise HTTPException(
+            status_code=409, detail="Job cannot be requeued in its current state"
+        )
     return job
 
 
@@ -110,7 +118,11 @@ async def list_queue_configs(session: AsyncSession = Depends(get_session)):
 
 
 @queue_router.put("/{queue_name}", response_model=QueueConfigResponse)
-async def upsert_queue_config(queue_name: str, body: QueueConfigCreate, session: AsyncSession = Depends(get_session)):
+async def upsert_queue_config(
+    queue_name: str,
+    body: QueueConfigCreate,
+    session: AsyncSession = Depends(get_session),
+):
     config = await core.upsert_queue_config(
         session,
         queue_name=queue_name,
@@ -126,7 +138,9 @@ recurring_router = APIRouter(prefix="/recurring", tags=["recurring"])
 
 
 @recurring_router.post("", response_model=RecurringJobResponse, status_code=201)
-async def create_recurring_job(body: RecurringJobCreate, session: AsyncSession = Depends(get_session)):
+async def create_recurring_job(
+    body: RecurringJobCreate, session: AsyncSession = Depends(get_session)
+):
     rj = await core.create_recurring_job(
         session,
         name=body.name,
@@ -147,7 +161,9 @@ async def list_recurring_jobs(session: AsyncSession = Depends(get_session)):
 
 
 @recurring_router.get("/{rj_id}", response_model=RecurringJobResponse)
-async def get_recurring_job(rj_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def get_recurring_job(
+    rj_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     rj = await core.get_recurring_job(session, rj_id)
     if not rj:
         raise HTTPException(status_code=404, detail="Recurring job not found")
@@ -155,7 +171,11 @@ async def get_recurring_job(rj_id: uuid.UUID, session: AsyncSession = Depends(ge
 
 
 @recurring_router.patch("/{rj_id}", response_model=RecurringJobResponse)
-async def toggle_recurring_job(rj_id: uuid.UUID, body: RecurringJobToggle, session: AsyncSession = Depends(get_session)):
+async def toggle_recurring_job(
+    rj_id: uuid.UUID,
+    body: RecurringJobToggle,
+    session: AsyncSession = Depends(get_session),
+):
     rj = await core.toggle_recurring_job(session, rj_id, body.enabled)
     if not rj:
         raise HTTPException(status_code=404, detail="Recurring job not found")
@@ -163,7 +183,9 @@ async def toggle_recurring_job(rj_id: uuid.UUID, body: RecurringJobToggle, sessi
 
 
 @recurring_router.delete("/{rj_id}", status_code=204)
-async def delete_recurring_job(rj_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def delete_recurring_job(
+    rj_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     deleted = await core.delete_recurring_job(session, rj_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Recurring job not found")

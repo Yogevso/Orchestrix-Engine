@@ -75,12 +75,16 @@ def _detect_cycle(steps: list[dict]) -> None:
             dfs(name)
 
 
-async def get_workflow(session: AsyncSession, workflow_id: uuid.UUID) -> Workflow | None:
+async def get_workflow(
+    session: AsyncSession, workflow_id: uuid.UUID
+) -> Workflow | None:
     return await session.get(Workflow, workflow_id)
 
 
 async def list_workflows(session: AsyncSession) -> list[Workflow]:
-    result = await session.execute(select(Workflow).order_by(Workflow.created_at.desc()))
+    result = await session.execute(
+        select(Workflow).order_by(Workflow.created_at.desc())
+    )
     return list(result.scalars().all())
 
 
@@ -131,7 +135,9 @@ async def start_workflow_run(
     return run
 
 
-async def get_workflow_run(session: AsyncSession, run_id: uuid.UUID) -> WorkflowRun | None:
+async def get_workflow_run(
+    session: AsyncSession, run_id: uuid.UUID
+) -> WorkflowRun | None:
     return await session.get(WorkflowRun, run_id)
 
 
@@ -279,10 +285,12 @@ async def on_job_failed(session: AsyncSession, job: Job) -> None:
             pending_steps = await session.execute(
                 select(WorkflowStep).where(
                     WorkflowStep.workflow_run_id == step.workflow_run_id,
-                    WorkflowStep.status.in_([
-                        WorkflowStepStatus.PENDING,
-                        WorkflowStepStatus.QUEUED,
-                    ]),
+                    WorkflowStep.status.in_(
+                        [
+                            WorkflowStepStatus.PENDING,
+                            WorkflowStepStatus.QUEUED,
+                        ]
+                    ),
                 )
             )
             for ps in pending_steps.scalars().all():
@@ -324,7 +332,9 @@ async def _check_run_completion(session: AsyncSession, run_id: uuid.UUID) -> Non
 # ────────────────────────── operator actions ──────────────────────────
 
 
-async def cancel_workflow_run(session: AsyncSession, run_id: uuid.UUID) -> WorkflowRun | None:
+async def cancel_workflow_run(
+    session: AsyncSession, run_id: uuid.UUID
+) -> WorkflowRun | None:
     run = await session.get(WorkflowRun, run_id)
     if not run or run.status not in (WorkflowStatus.PENDING, WorkflowStatus.RUNNING):
         return None
@@ -337,11 +347,13 @@ async def cancel_workflow_run(session: AsyncSession, run_id: uuid.UUID) -> Workf
     steps_result = await session.execute(
         select(WorkflowStep).where(
             WorkflowStep.workflow_run_id == run_id,
-            WorkflowStep.status.in_([
-                WorkflowStepStatus.PENDING,
-                WorkflowStepStatus.QUEUED,
-                WorkflowStepStatus.RUNNING,
-            ]),
+            WorkflowStep.status.in_(
+                [
+                    WorkflowStepStatus.PENDING,
+                    WorkflowStepStatus.QUEUED,
+                    WorkflowStepStatus.RUNNING,
+                ]
+            ),
         )
     )
     for step in steps_result.scalars().all():
@@ -354,7 +366,9 @@ async def cancel_workflow_run(session: AsyncSession, run_id: uuid.UUID) -> Workf
     return run
 
 
-async def pause_workflow_run(session: AsyncSession, run_id: uuid.UUID) -> WorkflowRun | None:
+async def pause_workflow_run(
+    session: AsyncSession, run_id: uuid.UUID
+) -> WorkflowRun | None:
     """Pause a running workflow — no new steps will be dispatched."""
     run = await session.get(WorkflowRun, run_id)
     if not run or run.status != WorkflowStatus.RUNNING:
@@ -366,7 +380,9 @@ async def pause_workflow_run(session: AsyncSession, run_id: uuid.UUID) -> Workfl
     return run
 
 
-async def resume_workflow_run(session: AsyncSession, run_id: uuid.UUID) -> WorkflowRun | None:
+async def resume_workflow_run(
+    session: AsyncSession, run_id: uuid.UUID
+) -> WorkflowRun | None:
     """Resume a paused workflow — re-dispatches ready steps."""
     run = await session.get(WorkflowRun, run_id)
     if not run or run.status != WorkflowStatus.PAUSED:
@@ -381,7 +397,9 @@ async def resume_workflow_run(session: AsyncSession, run_id: uuid.UUID) -> Workf
     return run
 
 
-async def retry_workflow_step(session: AsyncSession, step_id: uuid.UUID) -> WorkflowStep | None:
+async def retry_workflow_step(
+    session: AsyncSession, step_id: uuid.UUID
+) -> WorkflowStep | None:
     """Retry a specific failed workflow step."""
     step = await session.get(WorkflowStep, step_id)
     if not step or step.status != WorkflowStepStatus.FAILED:

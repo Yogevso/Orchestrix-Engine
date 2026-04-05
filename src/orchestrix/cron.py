@@ -30,7 +30,9 @@ def _parse_field(field: str, min_val: int, max_val: int) -> set[int]:
     return values
 
 
-def _parse_cron(expression: str) -> tuple[set[int], set[int], set[int], set[int], set[int]]:
+def _parse_cron(
+    expression: str,
+) -> tuple[set[int], set[int], set[int], set[int], set[int]]:
     parts = expression.strip().split()
     if len(parts) != 5:
         raise ValueError(f"Expected 5 cron fields, got {len(parts)}: {expression!r}")
@@ -63,4 +65,6 @@ def next_cron_time(expression: str, after: datetime) -> datetime:
             return candidate
         candidate += timedelta(minutes=1)
 
-    raise ValueError(f"Could not find next run time for cron expression: {expression!r}")
+    raise ValueError(
+        f"Could not find next run time for cron expression: {expression!r}"
+    )

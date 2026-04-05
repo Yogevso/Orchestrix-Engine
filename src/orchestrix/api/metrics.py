@@ -26,12 +26,16 @@ async def metrics(session: AsyncSession = Depends(get_session)):
 
     # ── Job counts by queue ──
     result = await session.execute(
-        select(Job.queue_name, Job.status, func.count(Job.id)).group_by(Job.queue_name, Job.status)
+        select(Job.queue_name, Job.status, func.count(Job.id)).group_by(
+            Job.queue_name, Job.status
+        )
     )
     lines.append("# HELP orchestrix_queue_jobs Jobs per queue by status")
     lines.append("# TYPE orchestrix_queue_jobs gauge")
     for queue, status, count in result.all():
-        lines.append(f'orchestrix_queue_jobs{{queue="{queue}",status="{status.value}"}} {count}')
+        lines.append(
+            f'orchestrix_queue_jobs{{queue="{queue}",status="{status.value}"}} {count}'
+        )
 
     # ── Workers by status ──
     result = await session.execute(
@@ -44,11 +48,15 @@ async def metrics(session: AsyncSession = Depends(get_session)):
 
     # ── Workflow runs by status ──
     result = await session.execute(
-        select(WorkflowRun.status, func.count(WorkflowRun.id)).group_by(WorkflowRun.status)
+        select(WorkflowRun.status, func.count(WorkflowRun.id)).group_by(
+            WorkflowRun.status
+        )
     )
     lines.append("# HELP orchestrix_workflow_runs_total Workflow runs by status")
     lines.append("# TYPE orchestrix_workflow_runs_total gauge")
     for status, count in result.all():
-        lines.append(f'orchestrix_workflow_runs_total{{status="{status.value}"}} {count}')
+        lines.append(
+            f'orchestrix_workflow_runs_total{{status="{status.value}"}} {count}'
+        )
 
     return "\n".join(lines) + "\n"

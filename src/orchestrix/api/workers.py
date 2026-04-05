@@ -20,7 +20,9 @@ router = APIRouter(prefix="/workers", tags=["workers"])
 
 
 @router.post("", response_model=WorkerResponse, status_code=201)
-async def register_worker(body: WorkerRegister, session: AsyncSession = Depends(get_session)):
+async def register_worker(
+    body: WorkerRegister, session: AsyncSession = Depends(get_session)
+):
     worker = await core.register_worker(
         session,
         name=body.name,
@@ -54,7 +56,11 @@ async def poll_job(worker_id: uuid.UUID, session: AsyncSession = Depends(get_ses
 
 
 @router.post("/{worker_id}/start", response_model=JobResponse)
-async def start_job(worker_id: uuid.UUID, body: HeartbeatRequest, session: AsyncSession = Depends(get_session)):
+async def start_job(
+    worker_id: uuid.UUID,
+    body: HeartbeatRequest,
+    session: AsyncSession = Depends(get_session),
+):
     job = await core.start_job(session, body.job_id, worker_id)
     if not job:
         raise HTTPException(status_code=409, detail="Cannot start job")
@@ -62,7 +68,11 @@ async def start_job(worker_id: uuid.UUID, body: HeartbeatRequest, session: Async
 
 
 @router.post("/{worker_id}/complete", response_model=JobResponse)
-async def complete_job(worker_id: uuid.UUID, body: CompleteRequest, session: AsyncSession = Depends(get_session)):
+async def complete_job(
+    worker_id: uuid.UUID,
+    body: CompleteRequest,
+    session: AsyncSession = Depends(get_session),
+):
     job = await core.complete_job(session, body.job_id, worker_id, body.result)
     if not job:
         raise HTTPException(status_code=409, detail="Cannot complete job")
@@ -70,7 +80,11 @@ async def complete_job(worker_id: uuid.UUID, body: CompleteRequest, session: Asy
 
 
 @router.post("/{worker_id}/fail", response_model=JobResponse)
-async def fail_job(worker_id: uuid.UUID, body: FailRequest, session: AsyncSession = Depends(get_session)):
+async def fail_job(
+    worker_id: uuid.UUID,
+    body: FailRequest,
+    session: AsyncSession = Depends(get_session),
+):
     job = await core.fail_job(session, body.job_id, worker_id, body.error)
     if not job:
         raise HTTPException(status_code=409, detail="Cannot fail job")
@@ -78,7 +92,11 @@ async def fail_job(worker_id: uuid.UUID, body: FailRequest, session: AsyncSessio
 
 
 @router.post("/{worker_id}/heartbeat")
-async def heartbeat(worker_id: uuid.UUID, body: HeartbeatRequest, session: AsyncSession = Depends(get_session)):
+async def heartbeat(
+    worker_id: uuid.UUID,
+    body: HeartbeatRequest,
+    session: AsyncSession = Depends(get_session),
+):
     # Heartbeat on the worker itself
     await core.worker_heartbeat(session, worker_id)
     # Heartbeat on the job lease

@@ -47,6 +47,7 @@ class MeResponse(BaseModel):
 async def get_me(user: TokenPayload | None = Depends(get_current_user)):
     if user is None:
         from orchestrix.config import settings
+
         return MeResponse(auth_enabled=settings.auth_enabled)
     return MeResponse(
         subject=user.sub,

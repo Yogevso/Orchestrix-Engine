@@ -3,8 +3,12 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql+asyncpg://orchestrix:orchestrix@localhost:5432/orchestrix"
-    database_url_sync: str = "postgresql://orchestrix:orchestrix@localhost:5432/orchestrix"
+    database_url: str = (
+        "postgresql+asyncpg://orchestrix:orchestrix@localhost:5432/orchestrix"
+    )
+    database_url_sync: str = (
+        "postgresql://orchestrix:orchestrix@localhost:5432/orchestrix"
+    )
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

@@ -16,6 +16,7 @@ from orchestrix.database import engine
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from orchestrix.telemetry import instrument_fastapi, setup_telemetry
+
     setup_telemetry(service_name="orchestrix-api")
     instrument_fastapi(app)
     yield

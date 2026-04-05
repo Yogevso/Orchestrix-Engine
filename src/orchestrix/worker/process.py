@@ -22,9 +22,16 @@ class WorkerProcess:
 
     async def register(self) -> None:
         async with async_session_factory() as session:
-            worker = await core.register_worker(session, name=self.name, queues=self.queues)
+            worker = await core.register_worker(
+                session, name=self.name, queues=self.queues
+            )
             self.worker_id = worker.id
-            logger.info("Worker registered: %s (id=%s, queues=%s)", self.name, self.worker_id, self.queues)
+            logger.info(
+                "Worker registered: %s (id=%s, queues=%s)",
+                self.name,
+                self.worker_id,
+                self.queues,
+            )
 
     async def run(self) -> None:
         await self.register()
@@ -36,7 +43,9 @@ class WorkerProcess:
             except Exception:
                 logger.exception("Unexpected error in poll loop")
             try:
-                await asyncio.wait_for(self._shutdown.wait(), timeout=settings.worker_poll_interval)
+                await asyncio.wait_for(
+                    self._shutdown.wait(), timeout=settings.worker_poll_interval
+                )
                 break  # shutdown was set
             except asyncio.TimeoutError:
                 pass  # normal — just loop again
@@ -60,7 +69,9 @@ class WorkerProcess:
         # Execute with heartbeat
         await self._execute_with_heartbeat(job.id, job.type, job.payload)
 
-    async def _execute_with_heartbeat(self, job_id: uuid.UUID, job_type: str, payload: dict) -> None:
+    async def _execute_with_heartbeat(
+        self, job_id: uuid.UUID, job_type: str, payload: dict
+    ) -> None:
         heartbeat_task = asyncio.create_task(self._heartbeat_loop(job_id))
 
         try:
@@ -76,6 +87,7 @@ class WorkerProcess:
                 # If this job is part of a workflow, advance the DAG
                 if job and job.workflow_step_id:
                     from orchestrix.engine.workflows import on_job_completed
+
                     await on_job_completed(session, job)
             logger.info("Job %s succeeded", job_id)
 
@@ -87,6 +99,7 @@ class WorkerProcess:
                 # If this job is part of a workflow, notify the DAG
                 if job and job.workflow_step_id:
                     from orchestrix.engine.workflows import on_job_failed
+
                     await on_job_failed(session, job)
 
         finally:
@@ -135,7 +148,9 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Orchestrix Worker")
     parser.add_argument("--name", default="worker-1", help="Worker name")
-    parser.add_argument("--queues", nargs="+", default=["default"], help="Queues to poll")
+    parser.add_argument(
+        "--queues", nargs="+", default=["default"], help="Queues to poll"
+    )
     args = parser.parse_args()
 
     asyncio.run(run_worker(name=args.name, queues=args.queues))

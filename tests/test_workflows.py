@@ -19,8 +19,20 @@ async def test_create_workflow(session: AsyncSession):
         name="test-wf",
         description="A test workflow",
         steps=[
-            {"name": "step1", "job_type": "email.send", "payload": {}, "depends_on": [], "max_attempts": 3},
-            {"name": "step2", "job_type": "data.process", "payload": {}, "depends_on": ["step1"], "max_attempts": 3},
+            {
+                "name": "step1",
+                "job_type": "email.send",
+                "payload": {},
+                "depends_on": [],
+                "max_attempts": 3,
+            },
+            {
+                "name": "step2",
+                "job_type": "data.process",
+                "payload": {},
+                "depends_on": ["step1"],
+                "max_attempts": 3,
+            },
         ],
     )
     assert wf.id is not None
@@ -35,8 +47,18 @@ async def test_cycle_detection(session: AsyncSession):
             name="cyclic-wf",
             description=None,
             steps=[
-                {"name": "a", "job_type": "email.send", "payload": {}, "depends_on": ["b"]},
-                {"name": "b", "job_type": "email.send", "payload": {}, "depends_on": ["a"]},
+                {
+                    "name": "a",
+                    "job_type": "email.send",
+                    "payload": {},
+                    "depends_on": ["b"],
+                },
+                {
+                    "name": "b",
+                    "job_type": "email.send",
+                    "payload": {},
+                    "depends_on": ["a"],
+                },
             ],
         )
 
@@ -48,7 +70,12 @@ async def test_missing_dependency_detection(session: AsyncSession):
             name="bad-dep-wf",
             description=None,
             steps=[
-                {"name": "a", "job_type": "email.send", "payload": {}, "depends_on": ["nonexistent"]},
+                {
+                    "name": "a",
+                    "job_type": "email.send",
+                    "payload": {},
+                    "depends_on": ["nonexistent"],
+                },
             ],
         )
 
@@ -62,10 +89,18 @@ async def test_start_workflow_run(session: AsyncSession):
         name="run-test-wf",
         description=None,
         steps=[
-            {"name": "root", "job_type": "email.send", "payload": {}, "depends_on": [], "max_attempts": 3},
+            {
+                "name": "root",
+                "job_type": "email.send",
+                "payload": {},
+                "depends_on": [],
+                "max_attempts": 3,
+            },
         ],
     )
-    run = await workflows.start_workflow_run(session, workflow_id=wf.id, input_payload={"x": 1})
+    run = await workflows.start_workflow_run(
+        session, workflow_id=wf.id, input_payload={"x": 1}
+    )
     assert run.status == WorkflowStatus.RUNNING
     steps = await workflows.get_run_steps(session, run.id)
     assert len(steps) == 1
@@ -79,10 +114,18 @@ async def test_cancel_workflow_run(session: AsyncSession):
         name="cancel-wf",
         description=None,
         steps=[
-            {"name": "s1", "job_type": "email.send", "payload": {}, "depends_on": [], "max_attempts": 3},
+            {
+                "name": "s1",
+                "job_type": "email.send",
+                "payload": {},
+                "depends_on": [],
+                "max_attempts": 3,
+            },
         ],
     )
-    run = await workflows.start_workflow_run(session, workflow_id=wf.id, input_payload={})
+    run = await workflows.start_workflow_run(
+        session, workflow_id=wf.id, input_payload={}
+    )
     cancelled = await workflows.cancel_workflow_run(session, run.id)
     assert cancelled is not None
     assert cancelled.status == WorkflowStatus.CANCELLED
@@ -96,7 +139,9 @@ async def test_list_workflows(session: AsyncSession):
         session,
         name="list-wf-1",
         description=None,
-        steps=[{"name": "s", "job_type": "email.send", "payload": {}, "depends_on": []}],
+        steps=[
+            {"name": "s", "job_type": "email.send", "payload": {}, "depends_on": []}
+        ],
     )
     wfs = await workflows.list_workflows(session)
     names = [w.name for w in wfs]

@@ -20,7 +20,9 @@ async def test_health(client: AsyncClient):
 
 
 async def test_create_and_get_job(client: AsyncClient):
-    resp = await client.post("/jobs", json={"type": "email.send", "payload": {"to": "x@y.com"}})
+    resp = await client.post(
+        "/jobs", json={"type": "email.send", "payload": {"to": "x@y.com"}}
+    )
     assert resp.status_code == 201
     data = resp.json()
     assert data["type"] == "email.send"
@@ -61,7 +63,10 @@ async def test_cancel_job(client: AsyncClient):
 
 
 async def test_job_stats(client: AsyncClient):
-    await client.post("/jobs", json={"type": "data.process", "payload": {}, "queue_name": "test-stats"})
+    await client.post(
+        "/jobs",
+        json={"type": "data.process", "payload": {}, "queue_name": "test-stats"},
+    )
     resp = await client.get("/jobs/stats")
     assert resp.status_code == 200
 
@@ -85,14 +90,27 @@ async def test_register_and_list_workers(client: AsyncClient):
 
 async def test_workflow_lifecycle(client: AsyncClient):
     # Create workflow
-    resp = await client.post("/workflows", json={
-        "name": "api-test-wf",
-        "description": "Test",
-        "steps": [
-            {"name": "s1", "job_type": "email.send", "payload": {}, "depends_on": []},
-            {"name": "s2", "job_type": "data.process", "payload": {}, "depends_on": ["s1"]},
-        ],
-    })
+    resp = await client.post(
+        "/workflows",
+        json={
+            "name": "api-test-wf",
+            "description": "Test",
+            "steps": [
+                {
+                    "name": "s1",
+                    "job_type": "email.send",
+                    "payload": {},
+                    "depends_on": [],
+                },
+                {
+                    "name": "s2",
+                    "job_type": "data.process",
+                    "payload": {},
+                    "depends_on": ["s1"],
+                },
+            ],
+        },
+    )
     assert resp.status_code == 201
     wf_id = resp.json()["id"]
 
@@ -101,7 +119,9 @@ async def test_workflow_lifecycle(client: AsyncClient):
     assert resp2.status_code == 200
 
     # Start a run
-    resp3 = await client.post("/workflows/runs", json={"workflow_id": wf_id, "input_payload": {}})
+    resp3 = await client.post(
+        "/workflows/runs", json={"workflow_id": wf_id, "input_payload": {}}
+    )
     assert resp3.status_code == 201
     run_id = resp3.json()["id"]
     assert resp3.json()["status"] == "RUNNING"
@@ -113,13 +133,16 @@ async def test_workflow_lifecycle(client: AsyncClient):
 
 
 async def test_workflow_cycle_rejected(client: AsyncClient):
-    resp = await client.post("/workflows", json={
-        "name": "cyclic-api-wf",
-        "steps": [
-            {"name": "a", "job_type": "x", "payload": {}, "depends_on": ["b"]},
-            {"name": "b", "job_type": "x", "payload": {}, "depends_on": ["a"]},
-        ],
-    })
+    resp = await client.post(
+        "/workflows",
+        json={
+            "name": "cyclic-api-wf",
+            "steps": [
+                {"name": "a", "job_type": "x", "payload": {}, "depends_on": ["b"]},
+                {"name": "b", "job_type": "x", "payload": {}, "depends_on": ["a"]},
+            ],
+        },
+    )
     assert resp.status_code == 422
 
 
@@ -127,7 +150,9 @@ async def test_workflow_cycle_rejected(client: AsyncClient):
 
 
 async def test_queue_config(client: AsyncClient):
-    resp = await client.put("/queues/test-q", json={"queue_name": "test-q", "max_concurrency": 5})
+    resp = await client.put(
+        "/queues/test-q", json={"queue_name": "test-q", "max_concurrency": 5}
+    )
     assert resp.status_code == 200
     assert resp.json()["max_concurrency"] == 5
 
@@ -139,11 +164,14 @@ async def test_queue_config(client: AsyncClient):
 
 
 async def test_recurring_job_crud(client: AsyncClient):
-    resp = await client.post("/recurring", json={
-        "name": "daily-report",
-        "type": "report.generate",
-        "cron_expression": "0 9 * * *",
-    })
+    resp = await client.post(
+        "/recurring",
+        json={
+            "name": "daily-report",
+            "type": "report.generate",
+            "cron_expression": "0 9 * * *",
+        },
+    )
     assert resp.status_code == 201
     rj_id = resp.json()["id"]
 

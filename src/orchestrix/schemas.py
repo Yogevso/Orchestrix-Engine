@@ -189,6 +189,7 @@ class RecurringJobToggle(BaseModel):
 
 class WorkflowStepDef(BaseModel):
     """A single step within a workflow definition."""
+
     name: str = Field(..., max_length=255)
     job_type: str = Field(..., max_length=255)
     payload: dict = Field(default_factory=dict)

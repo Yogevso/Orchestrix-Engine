@@ -12,9 +12,11 @@ HANDLERS: dict[str, callable] = {}
 
 def register(job_type: str):
     """Decorator to register a handler for a job type."""
+
     def decorator(func):
         HANDLERS[job_type] = func
         return func
+
     return decorator
 
 

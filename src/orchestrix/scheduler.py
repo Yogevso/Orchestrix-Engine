@@ -25,7 +25,9 @@ class SchedulerProcess:
                 logger.exception("Scheduler tick error")
 
             try:
-                await asyncio.wait_for(self._shutdown.wait(), timeout=self.check_interval)
+                await asyncio.wait_for(
+                    self._shutdown.wait(), timeout=self.check_interval
+                )
                 break
             except asyncio.TimeoutError:
                 pass
@@ -51,6 +53,7 @@ class SchedulerProcess:
 
             # 4. Advance workflow steps
             from orchestrix.engine.workflows import advance_all_pending_runs
+
             advanced = await advance_all_pending_runs(session)
             if advanced:
                 logger.info("Advanced %d workflow step(s)", advanced)
@@ -81,7 +84,9 @@ def main() -> None:
     )
 
     parser = argparse.ArgumentParser(description="Orchestrix Scheduler")
-    parser.add_argument("--interval", type=float, default=5.0, help="Check interval in seconds")
+    parser.add_argument(
+        "--interval", type=float, default=5.0, help="Check interval in seconds"
+    )
     args = parser.parse_args()
 
     asyncio.run(run_scheduler(check_interval=args.interval))

@@ -21,7 +21,9 @@ router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 
 @router.post("", response_model=WorkflowResponse, status_code=201)
-async def create_workflow(body: WorkflowCreate, session: AsyncSession = Depends(get_session)):
+async def create_workflow(
+    body: WorkflowCreate, session: AsyncSession = Depends(get_session)
+):
     try:
         wf = await workflows.create_workflow(
             session,
@@ -45,7 +47,9 @@ async def list_workflows(session: AsyncSession = Depends(get_session)):
 
 
 @router.post("/runs", response_model=WorkflowRunResponse, status_code=201)
-async def start_workflow_run(body: WorkflowRunCreate, session: AsyncSession = Depends(get_session)):
+async def start_workflow_run(
+    body: WorkflowRunCreate, session: AsyncSession = Depends(get_session)
+):
     try:
         run = await workflows.start_workflow_run(
             session,
@@ -58,7 +62,11 @@ async def start_workflow_run(body: WorkflowRunCreate, session: AsyncSession = De
 
     steps = await workflows.get_run_steps(session, run.id)
     return WorkflowRunResponse(
-        **{k: v for k, v in WorkflowRunResponse.model_validate(run).model_dump().items() if k != "steps"},
+        **{
+            k: v
+            for k, v in WorkflowRunResponse.model_validate(run).model_dump().items()
+            if k != "steps"
+        },
         steps=[WorkflowStepResponse.model_validate(s) for s in steps],
     )
 
@@ -90,7 +98,9 @@ async def list_workflow_runs(
 
 
 @router.get("/runs/{run_id}", response_model=WorkflowRunResponse)
-async def get_workflow_run(run_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def get_workflow_run(
+    run_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     run = await workflows.get_workflow_run(session, run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Workflow run not found")
@@ -102,7 +112,9 @@ async def get_workflow_run(run_id: uuid.UUID, session: AsyncSession = Depends(ge
 
 
 @router.post("/runs/{run_id}/cancel", response_model=WorkflowRunResponse)
-async def cancel_workflow_run(run_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def cancel_workflow_run(
+    run_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     run = await workflows.cancel_workflow_run(session, run_id)
     if not run:
         raise HTTPException(status_code=409, detail="Cannot cancel this workflow run")
@@ -114,10 +126,14 @@ async def cancel_workflow_run(run_id: uuid.UUID, session: AsyncSession = Depends
 
 
 @router.post("/runs/{run_id}/pause", response_model=WorkflowRunResponse)
-async def pause_workflow_run(run_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def pause_workflow_run(
+    run_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     run = await workflows.pause_workflow_run(session, run_id)
     if not run:
-        raise HTTPException(status_code=409, detail="Cannot pause this workflow run (must be RUNNING)")
+        raise HTTPException(
+            status_code=409, detail="Cannot pause this workflow run (must be RUNNING)"
+        )
 
     steps = await workflows.get_run_steps(session, run.id)
     resp = WorkflowRunResponse.model_validate(run)
@@ -126,10 +142,14 @@ async def pause_workflow_run(run_id: uuid.UUID, session: AsyncSession = Depends(
 
 
 @router.post("/runs/{run_id}/resume", response_model=WorkflowRunResponse)
-async def resume_workflow_run(run_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def resume_workflow_run(
+    run_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     run = await workflows.resume_workflow_run(session, run_id)
     if not run:
-        raise HTTPException(status_code=409, detail="Cannot resume this workflow run (must be PAUSED)")
+        raise HTTPException(
+            status_code=409, detail="Cannot resume this workflow run (must be PAUSED)"
+        )
 
     steps = await workflows.get_run_steps(session, run.id)
     resp = WorkflowRunResponse.model_validate(run)
@@ -138,7 +158,9 @@ async def resume_workflow_run(run_id: uuid.UUID, session: AsyncSession = Depends
 
 
 @router.post("/steps/{step_id}/retry", response_model=WorkflowStepResponse)
-async def retry_workflow_step(step_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def retry_workflow_step(
+    step_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     step = await workflows.retry_workflow_step(session, step_id)
     if not step:
         raise HTTPException(status_code=409, detail="Cannot retry this step")
@@ -149,7 +171,9 @@ async def retry_workflow_step(step_id: uuid.UUID, session: AsyncSession = Depend
 
 
 @router.get("/{workflow_id}", response_model=WorkflowResponse)
-async def get_workflow(workflow_id: uuid.UUID, session: AsyncSession = Depends(get_session)):
+async def get_workflow(
+    workflow_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+):
     wf = await workflows.get_workflow(session, workflow_id)
     if not wf:
         raise HTTPException(status_code=404, detail="Workflow not found")

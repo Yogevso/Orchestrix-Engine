@@ -21,7 +21,7 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, topics: list[str] | None = None):
         await websocket.accept()
         self._connections.add(websocket)
-        for topic in (topics or ["*"]):
+        for topic in topics or ["*"]:
             self._subscribers[topic].add(websocket)
         logger.info("WebSocket connected (topics=%s)", topics or ["*"])
 
@@ -33,7 +33,9 @@ class ConnectionManager:
     async def broadcast(self, topic: str, data: dict):
         """Send a message to all subscribers of a topic and wildcard subscribers."""
         message = json.dumps({"topic": topic, "data": data})
-        targets = self._subscribers.get(topic, set()) | self._subscribers.get("*", set())
+        targets = self._subscribers.get(topic, set()) | self._subscribers.get(
+            "*", set()
+        )
         dead = []
         for ws in targets:
             try:

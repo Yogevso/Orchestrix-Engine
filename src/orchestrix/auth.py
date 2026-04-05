@@ -42,7 +42,9 @@ def create_access_token(
     }
     if tenant_id:
         payload["tenant_id"] = tenant_id
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
 
 
 def decode_token(token: str) -> dict:
@@ -64,7 +66,11 @@ def decode_token(token: str) -> dict:
             if payload.get("type") == "access":
                 # Map IAM roles to Engine roles
                 iam_role = payload.get("role", "USER")
-                role_map = {"SYS_ADMIN": "admin", "TENANT_ADMIN": "operator", "USER": "viewer"}
+                role_map = {
+                    "SYS_ADMIN": "admin",
+                    "TENANT_ADMIN": "operator",
+                    "USER": "viewer",
+                }
                 payload["role"] = role_map.get(iam_role, "viewer")
                 return payload
         except jwt.InvalidTokenError:
@@ -72,11 +78,17 @@ def decode_token(token: str) -> dict:
 
     # Engine-issued token
     try:
-        return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        return jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+        )
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
+        )
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
 
 
 class TokenPayload:
@@ -97,7 +109,9 @@ async def get_current_user(
         return None
 
     if not credentials:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
 
     data = decode_token(credentials.credentials)
     return TokenPayload(

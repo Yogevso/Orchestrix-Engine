@@ -35,7 +35,9 @@ async def _emit_event(
     message: str | None = None,
     metadata: dict | None = None,
 ) -> None:
-    event = JobEvent(job_id=job_id, event_type=event_type, message=message, metadata_=metadata)
+    event = JobEvent(
+        job_id=job_id, event_type=event_type, message=message, metadata_=metadata
+    )
     session.add(event)
 
 
@@ -82,7 +84,9 @@ async def create_job(
 # ────────────────────────── polling / leasing ──────────────────────────
 
 
-async def poll_job(session: AsyncSession, worker_id: uuid.UUID, queues: list[str]) -> Job | None:
+async def poll_job(
+    session: AsyncSession, worker_id: uuid.UUID, queues: list[str]
+) -> Job | None:
     """Atomically lease the highest-priority available job for the given worker."""
     now = _utcnow()
     lease_until = now + timedelta(seconds=settings.lease_duration_seconds)
@@ -129,18 +133,24 @@ async def poll_job(session: AsyncSession, worker_id: uuid.UUID, queues: list[str
 # ────────────────────────── start execution ──────────────────────────
 
 
-async def start_job(session: AsyncSession, job_id: uuid.UUID, worker_id: uuid.UUID) -> Job | None:
+async def start_job(
+    session: AsyncSession, job_id: uuid.UUID, worker_id: uuid.UUID
+) -> Job | None:
     """Transition from LEASED → RUNNING. Called by worker after picking up."""
     now = _utcnow()
     result = await session.execute(
         update(Job)
-        .where(Job.id == job_id, Job.status == JobStatus.LEASED, Job.worker_id == worker_id)
+        .where(
+            Job.id == job_id, Job.status == JobStatus.LEASED, Job.worker_id == worker_id
+        )
         .values(status=JobStatus.RUNNING, attempts=Job.attempts + 1, updated_at=now)
         .returning(Job)
     )
     job = result.scalars().first()
     if job:
-        await _emit_event(session, job.id, JobEventType.RUNNING, f"Attempt {job.attempts}")
+        await _emit_event(
+            session, job.id, JobEventType.RUNNING, f"Attempt {job.attempts}"
+        )
         await session.commit()
     return job
 
@@ -149,12 +159,19 @@ async def start_job(session: AsyncSession, job_id: uuid.UUID, worker_id: uuid.UU
 
 
 async def complete_job(
-    session: AsyncSession, job_id: uuid.UUID, worker_id: uuid.UUID, result: dict | None = None
+    session: AsyncSession,
+    job_id: uuid.UUID,
+    worker_id: uuid.UUID,
+    result: dict | None = None,
 ) -> Job | None:
     now = _utcnow()
     res = await session.execute(
         update(Job)
-        .where(Job.id == job_id, Job.status == JobStatus.RUNNING, Job.worker_id == worker_id)
+        .where(
+            Job.id == job_id,
+            Job.status == JobStatus.RUNNING,
+            Job.worker_id == worker_id,
+        )
         .values(
             status=JobStatus.SUCCEEDED,
             lease_expires_at=None,
@@ -165,9 +182,12 @@ async def complete_job(
     )
     job = res.scalars().first()
     if job:
-        await _emit_event(session, job.id, JobEventType.SUCCEEDED, "Job succeeded", result)
+        await _emit_event(
+            session, job.id, JobEventType.SUCCEEDED, "Job succeeded", result
+        )
         await session.commit()
         from orchestrix.websocket import notify_job_update
+
         _fire_and_forget(notify_job_update(str(job.id), "SUCCEEDED"))
     return job
 
@@ -192,6 +212,7 @@ async def fail_job(
     if job.attempts < job.max_attempts:
         # Use configurable retry policy per job type
         from orchestrix.engine.retry import get_retry_policy
+
         policy = get_retry_policy(job.type)
         delay = policy.compute_delay(job.attempts)
         job.available_at = now + timedelta(seconds=delay)
@@ -201,7 +222,11 @@ async def fail_job(
             job.id,
             JobEventType.RETRIED,
             f"Retrying ({policy.strategy.value}) after {delay:.1f}s (attempt {job.attempts}/{job.max_attempts})",
-            {"delay_seconds": delay, "attempt": job.attempts, "strategy": policy.strategy.value},
+            {
+                "delay_seconds": delay,
+                "attempt": job.attempts,
+                "strategy": policy.strategy.value,
+            },
         )
     else:
         job.status = JobStatus.DEAD_LETTER
@@ -214,6 +239,7 @@ async def fail_job(
 
     await session.commit()
     from orchestrix.websocket import notify_job_update
+
     _fire_and_forget(notify_job_update(str(job.id), job.status.value))
     return job
 
@@ -229,7 +255,11 @@ async def heartbeat_job(
 
     result = await session.execute(
         update(Job)
-        .where(Job.id == job_id, Job.worker_id == worker_id, Job.status == JobStatus.RUNNING)
+        .where(
+            Job.id == job_id,
+            Job.worker_id == worker_id,
+            Job.status == JobStatus.RUNNING,
+        )
         .values(lease_expires_at=lease_until, updated_at=now)
         .returning(Job)
     )
@@ -268,12 +298,18 @@ async def recover_stuck_jobs(session: AsyncSession) -> int:
             job.status = JobStatus.QUEUED
             job.available_at = now
             await _emit_event(
-                session, job.id, JobEventType.REQUEUED,
+                session,
+                job.id,
+                JobEventType.REQUEUED,
                 f"Lease expired (worker {old_worker} never started) — requeued",
             )
         elif job.status == JobStatus.RUNNING:
             # Was running — count as failure attempt
-            job.attempts = min(job.attempts + 1, job.max_attempts) if job.attempts == 0 else job.attempts
+            job.attempts = (
+                min(job.attempts + 1, job.max_attempts)
+                if job.attempts == 0
+                else job.attempts
+            )
             if job.attempts < job.max_attempts:
                 delay = min(
                     settings.retry_base_delay_seconds * (2 ** (job.attempts - 1)),
@@ -283,14 +319,18 @@ async def recover_stuck_jobs(session: AsyncSession) -> int:
                 job.status = JobStatus.QUEUED
                 job.last_error = "Worker lost (lease expired)"
                 await _emit_event(
-                    session, job.id, JobEventType.RETRIED,
+                    session,
+                    job.id,
+                    JobEventType.RETRIED,
                     f"Worker {old_worker} lost — retrying after {delay:.1f}s",
                 )
             else:
                 job.status = JobStatus.DEAD_LETTER
                 job.last_error = "Worker lost (lease expired)"
                 await _emit_event(
-                    session, job.id, JobEventType.DEAD_LETTERED,
+                    session,
+                    job.id,
+                    JobEventType.DEAD_LETTERED,
                     f"Worker {old_worker} lost — exhausted attempts — dead-lettered",
                 )
         count += 1
@@ -323,7 +363,9 @@ async def register_worker(
     return worker
 
 
-async def worker_heartbeat(session: AsyncSession, worker_id: uuid.UUID) -> Worker | None:
+async def worker_heartbeat(
+    session: AsyncSession, worker_id: uuid.UUID
+) -> Worker | None:
     worker = await session.get(Worker, worker_id)
     if not worker:
         return None
@@ -390,7 +432,9 @@ async def list_jobs(
 
 async def get_job_events(session: AsyncSession, job_id: uuid.UUID) -> list[JobEvent]:
     result = await session.execute(
-        select(JobEvent).where(JobEvent.job_id == job_id).order_by(JobEvent.created_at.asc())
+        select(JobEvent)
+        .where(JobEvent.job_id == job_id)
+        .order_by(JobEvent.created_at.asc())
     )
     return list(result.scalars().all())
 
@@ -435,7 +479,9 @@ async def get_queue_stats(session: AsyncSession) -> list[dict]:
             func.count(case((Job.status == JobStatus.RUNNING, 1))).label("running"),
             func.count(case((Job.status == JobStatus.SUCCEEDED, 1))).label("succeeded"),
             func.count(case((Job.status == JobStatus.FAILED, 1))).label("failed"),
-            func.count(case((Job.status == JobStatus.DEAD_LETTER, 1))).label("dead_letter"),
+            func.count(case((Job.status == JobStatus.DEAD_LETTER, 1))).label(
+                "dead_letter"
+            ),
         ).group_by(Job.queue_name)
     )
     return [
@@ -496,8 +542,14 @@ async def upsert_queue_config(
     rate_limit_per_second: int | None = None,
 ) -> QueueConfig:
     existing = (
-        await session.execute(select(QueueConfig).where(QueueConfig.queue_name == queue_name))
-    ).scalars().first()
+        (
+            await session.execute(
+                select(QueueConfig).where(QueueConfig.queue_name == queue_name)
+            )
+        )
+        .scalars()
+        .first()
+    )
 
     if existing:
         if max_concurrency is not None:
@@ -517,8 +569,12 @@ async def upsert_queue_config(
     return existing
 
 
-async def get_queue_config(session: AsyncSession, queue_name: str) -> QueueConfig | None:
-    result = await session.execute(select(QueueConfig).where(QueueConfig.queue_name == queue_name))
+async def get_queue_config(
+    session: AsyncSession, queue_name: str
+) -> QueueConfig | None:
+    result = await session.execute(
+        select(QueueConfig).where(QueueConfig.queue_name == queue_name)
+    )
     return result.scalars().first()
 
 
@@ -582,11 +638,15 @@ async def list_recurring_jobs(session: AsyncSession) -> list[RecurringJob]:
     return list(result.scalars().all())
 
 
-async def get_recurring_job(session: AsyncSession, rj_id: uuid.UUID) -> RecurringJob | None:
+async def get_recurring_job(
+    session: AsyncSession, rj_id: uuid.UUID
+) -> RecurringJob | None:
     return await session.get(RecurringJob, rj_id)
 
 
-async def toggle_recurring_job(session: AsyncSession, rj_id: uuid.UUID, enabled: bool) -> RecurringJob | None:
+async def toggle_recurring_job(
+    session: AsyncSession, rj_id: uuid.UUID, enabled: bool
+) -> RecurringJob | None:
     rj = await session.get(RecurringJob, rj_id)
     if not rj:
         return None

@@ -10,7 +10,10 @@ router = APIRouter(tags=["websocket"])
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    topics: str | None = Query(None, description="Comma-separated topics: job.update, workflow.update, worker.update"),
+    topics: str | None = Query(
+        None,
+        description="Comma-separated topics: job.update, workflow.update, worker.update",
+    ),
 ):
     topic_list = topics.split(",") if topics else None
     await manager.connect(websocket, topic_list)

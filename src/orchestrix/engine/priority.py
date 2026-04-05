@@ -3,7 +3,9 @@
 import random
 
 
-def weighted_queue_selection(queues: list[str], weights: dict[str, int] | None = None) -> list[str]:
+def weighted_queue_selection(
+    queues: list[str], weights: dict[str, int] | None = None
+) -> list[str]:
     """Sort queues by weighted priority for polling order.
 
     Each queue has a weight (default 1). Higher weight = more poll slots.

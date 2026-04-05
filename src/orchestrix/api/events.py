@@ -13,7 +13,9 @@ router = APIRouter(prefix="/events", tags=["events"])
 
 @router.get("", response_model=EventListResponse)
 async def list_events(
-    since: datetime | None = Query(None, description="Only return events created at or after this timestamp"),
+    since: datetime | None = Query(
+        None, description="Only return events created at or after this timestamp"
+    ),
     event_type: JobEventType | None = Query(None, description="Filter by event type"),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
